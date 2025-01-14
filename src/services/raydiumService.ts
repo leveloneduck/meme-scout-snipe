@@ -2,7 +2,8 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import { LiquidityPoolKeysV4 } from "@raydium-io/raydium-sdk";
 
 // Using Helius RPC endpoint as it's more reliable
-const RPC_ENDPOINT = "https://rpc-mainnet.helius.xyz/?api-key=7c0c047d-e3fd-44d0-961f-bd46d7f54533";
+// const RPC_ENDPOINT = "https://rpc-mainnet.helius.xyz/?api-key=7c0c047d-e3fd-44d0-961f-bd46d7f54533";
+const RPC_ENDPOINT = 'https://mainnet.helius-rpc.com/?api-key=7c0c047d-e3fd-44d0-961f-bd46d7f54533';
 const RAYDIUM_POOL_V4_PROGRAM_ID = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8";
 
 export interface PoolInfo {
