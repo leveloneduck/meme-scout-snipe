@@ -1,7 +1,8 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { LiquidityPoolKeysV4 } from "@raydium-io/raydium-sdk";
 
-const RPC_ENDPOINT = "https://api.mainnet-beta.solana.com";
+// Using Helius RPC endpoint as it's more reliable
+const RPC_ENDPOINT = "https://rpc-mainnet.helius.xyz/?api-key=YOUR_API_KEY";
 const RAYDIUM_POOL_V4_PROGRAM_ID = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8";
 
 export interface PoolInfo {
@@ -16,37 +17,76 @@ export interface PoolInfo {
 export class RaydiumService {
   private connection: Connection;
   private seenTransactions: Set<string>;
+  private reconnectAttempts: number = 0;
+  private maxReconnectAttempts: number = 5;
 
   constructor() {
-    this.connection = new Connection(RPC_ENDPOINT);
+    this.connection = new Connection(RPC_ENDPOINT, {
+      wsEndpoint: RPC_ENDPOINT.replace('https', 'wss'),
+      commitment: 'confirmed'
+    });
     this.seenTransactions = new Set();
   }
 
   subscribeToNewPools(callback: (poolInfo: PoolInfo) => void) {
-    this.connection.onLogs(
-      new PublicKey(RAYDIUM_POOL_V4_PROGRAM_ID),
-      async (logs) => {
-        if (this.seenTransactions.has(logs.signature)) return;
-        this.seenTransactions.add(logs.signature);
+    const setupSubscription = () => {
+      try {
+        console.log("Setting up Raydium pool subscription...");
+        
+        this.connection.onLogs(
+          new PublicKey(RAYDIUM_POOL_V4_PROGRAM_ID),
+          async (logs) => {
+            if (this.seenTransactions.has(logs.signature)) return;
+            this.seenTransactions.add(logs.signature);
 
-        try {
-          if (!logs.logs.some((log) => log.includes("init_pc_amount"))) return;
+            try {
+              if (!logs.logs.some((log) => log.includes("init_pc_amount"))) return;
 
-          const poolKeys = await this.fetchPoolKeys(logs.signature);
-          
-          callback({
-            address: poolKeys.id.toString(),
-            baseMint: poolKeys.baseMint.toString(),
-            quoteMint: poolKeys.quoteMint.toString(),
-            timestamp: Date.now(),
-            baseDecimals: poolKeys.baseDecimals,
-            quoteDecimals: poolKeys.quoteDecimals,
-          });
-        } catch (error) {
-          console.error("Error processing pool:", error);
-        }
+              const poolKeys = await this.fetchPoolKeys(logs.signature);
+              
+              callback({
+                address: poolKeys.id.toString(),
+                baseMint: poolKeys.baseMint.toString(),
+                quoteMint: poolKeys.quoteMint.toString(),
+                timestamp: Date.now(),
+                baseDecimals: poolKeys.baseDecimals,
+                quoteDecimals: poolKeys.quoteDecimals,
+              });
+            } catch (error) {
+              console.error("Error processing pool:", error);
+            }
+          },
+          'confirmed'
+        );
+
+        // Reset reconnect attempts on successful connection
+        this.reconnectAttempts = 0;
+        console.log("Successfully subscribed to Raydium pools");
+      } catch (error) {
+        console.error("Error setting up subscription:", error);
+        this.handleReconnect(setupSubscription);
       }
-    );
+    };
+
+    setupSubscription();
+  }
+
+  private handleReconnect(setupSubscription: () => void) {
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      this.reconnectAttempts++;
+      const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+      console.log(`Attempting to reconnect in ${delay/1000} seconds... (Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+      
+      setTimeout(() => {
+        this.connection = new Connection(RPC_ENDPOINT, {
+          wsEndpoint: RPC_ENDPOINT.replace('https', 'wss'),
+          commitment: 'confirmed'
+        });
+        setupSubscription();
+      }, delay);
+    } else {
+      console.error("Max reconnection attempts reached. Please check your connection or try again later.");
+    }
   }
 
   private async fetchPoolKeys(signature: string): Promise<LiquidityPoolKeysV4> {
