@@ -9,10 +9,8 @@ const SERUM_OPENBOOK_PROGRAM_ID = 'srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX';
 const SOL_MINT = 'So11111111111111111111111111111111111111112';
 const SOL_DECIMALS = 9;
 
-// Add Buffer to window object
-if (typeof window !== 'undefined') {
-  window.Buffer = Buffer;
-}
+// Initialize Buffer globally
+globalThis.Buffer = Buffer;
 
 export interface PoolInfo {
   address: string;
