@@ -1,5 +1,6 @@
 import { Connection, PublicKey, ParsedTransactionWithMeta, PartiallyDecodedInstruction, ParsedInstruction, ParsedInnerInstruction } from "@solana/web3.js";
 import { LiquidityPoolKeysV4, MARKET_STATE_LAYOUT_V3, Market, TOKEN_PROGRAM_ID } from "@raydium-io/raydium-sdk";
+import { Buffer } from 'buffer';
 
 // Using Helius RPC endpoint as it's more reliable
 const RPC_ENDPOINT = 'https://mainnet.helius-rpc.com/?api-key=7c0c047d-e3fd-44d0-961f-bd46d7f54533';
@@ -7,6 +8,11 @@ const RAYDIUM_POOL_V4_PROGRAM_ID = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8
 const SERUM_OPENBOOK_PROGRAM_ID = 'srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX';
 const SOL_MINT = 'So11111111111111111111111111111111111111112';
 const SOL_DECIMALS = 9;
+
+// Add Buffer to window object
+if (typeof window !== 'undefined') {
+  window.Buffer = Buffer;
+}
 
 export interface PoolInfo {
   address: string;
@@ -132,6 +138,7 @@ export class RaydiumService {
       marketBids: marketInfo.bids,
       marketAsks: marketInfo.asks,
       marketEventQueue: marketInfo.eventQueue,
+      lookupTableAccount: null, // Add the missing property
     };
   }
 
